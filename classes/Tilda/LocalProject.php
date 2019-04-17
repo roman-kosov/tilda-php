@@ -413,7 +413,9 @@ class LocalProject
         } else {
             $ext = '';
         }
-        
+
+        $isRewrite = false;
+
         echo "==> copy file from: $from ".($isRewrite ? 'with rewrite' : 'without rewirite')."\n";
         /* если */
         if (file_exists($fullprojectdir.$newfile.'.'.$ext) && $isRewrite==false) {
@@ -506,7 +508,6 @@ class LocalProject
         } else {
             echo "file create failed: ".$newfile."\n";
         }
-     
     }
 
     /* показываем страницу, если она есть */
@@ -584,6 +585,36 @@ class LocalProject
         return $tildapage;
     }
 
+    /*
+    * Удаляем TildaStat
+    */
+    public function removeTildaStat($tildapage) {
+        $html = null;
+
+        $html = preg_replace('/<script type="text\/javascript">if \(! window.mainTracker\)(.*)tildastat-0.2.min.js\'\);</script>/', '', $tildapage['html']);
+
+        if ($html) {
+            $tildapage['html'] = $html;
+        }
+
+        return $tildapage;
+    }
+
+    /*
+    * Удаляем YandexMetrika
+    */
+    public function removeYandexMetrika($tildapage) {
+        $html = null;
+
+        $html = preg_replace('/<!-- Yandex\.Metrika counter (\d+) -->(.*)<!-- \/Yandex\.Metrika counter -->/', ' ', $tildapage['html']);
+
+        if ($html) {
+            $tildapage['html'] = $html;
+        }
+
+        return $tildapage;
+    }
+
     /**
      * Сохраняем страницу
      */
@@ -631,10 +662,15 @@ class LocalProject
             );
             $tildapage['fb_img'] = $tmp;
             
-        }    
+        }
+
         /* заменяем пути до картинок в HTML на новые (куда картинки скачались) */
         $tildapage = $this->replaceOuterImageToLocal($tildapage, $tildapage['export_imgpath'], '');
-        
+
+        $tildapage = $this->removeYandexMetrika($tildapage);
+
+        $tildapage = $this->removeTildaStat($tildapage);
+
         /* сохраняем HTML */
         file_put_contents($this->getProjectFullDir() . $filename, $tildapage['html']);
 
@@ -672,7 +708,6 @@ EOT;
         
         return $page;
     }
-    
 
     /* в случае ошибки отправляет сообщение, выводит JSON сообщение об ошибке и завершает работу скрипта */
     public function errorEnd($message)
@@ -684,7 +719,7 @@ EOT;
         }
         die('{"error":"'.htmlentities($message).'"}');
     }
-    
+
     /* в случае успеха, выводит JSON сообщение и завершает работу скрипта */
     public function successEnd($message='OK')
     {
@@ -695,8 +730,4 @@ EOT;
         }
         die('{"result":"OK"}');
     }
-
-
-
 }
-
