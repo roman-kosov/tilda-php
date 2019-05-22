@@ -615,6 +615,102 @@ class LocalProject
         return $tildapage;
     }
 
+    public function addSetTimeoutForScripts($tildapage) {
+        $html = null;
+        $scripts = null;
+        $body = null;
+
+        preg_match_all('/(?<=<[Ss][Cc][Rr][Ii][Pp][Tt]>|<[Ss][Cc][Rr][Ii][Pp][Tt] type="text\/javascript">)([\s\S]*?)(?=<\/[Ss][Cc][Rr][Ii][Pp][Tt]>)/', $tildapage['html'], $scripts);
+
+        $html = preg_replace('/<[Ss][Cc][Rr][Ii][Pp][Tt]( type="text\/javascript"|)>([\s\S]*?)<\/[Ss][Cc][Rr][Ii][Pp][Tt]>/', '', $tildapage['html']);
+
+        foreach ($scripts[0] as $script) {
+            $body .= $script;
+        }
+
+        $body = '<script type="text/javascript">
+        function loop' . $tildapage['id'] . '() {
+        if (window.jQuery) {' . $body . '}}
+        var timer' . $tildapage['id'] . ' = setTimeout(function () {
+        loop' . $tildapage['id'] . '();
+            }, 500);
+        </script>';
+
+        $html = preg_replace('/<\/body>/', $body . '</body>', $html);
+
+        if ($html) {
+            $tildapage['html'] = $html;
+        }
+
+        return $tildapage;
+    }
+
+    /*
+    * Перемещаем стили и скрипты в самый низ, до </body>
+    */
+    public function replaceHeadScriptsToBody($tildapage) {
+        $html = $tildapage['html'];
+        $scripts = null;
+        $styles = null;
+        $preloadstyles = null;
+        $body = null;
+
+        echo "Replace Head's Scripts to Body\n";
+
+        preg_match_all('/<script( type="text\/javascript"|) src="[a-z\/\.]+(tilda-[a-z]+(-[a-z]+|)|jquery-\d+|tiny-date-picker|lazyload|hammer|highlight|\/share2\/share)(.\d+.\d+|)(.min|).js(\?t=\d+|)"( charset="utf-8"|)><\/script>/', $html, $scripts);
+        preg_match_all('/<link rel="stylesheet" (type="text\/css" |)href="[a-z\/]+(custom|highlight|tilda-[a-z]+.\d+.\d+)(.min|).css(\?t=\d+|)"( type="text\/css" media="all" \/|)>/', $html, $styles);
+
+        // print_r($scripts[0]);
+
+        $html = preg_replace('/<script( type="text\/javascript"|) src="[a-z\/\.]+(tilda-[a-z]+(-[a-z]+|)|jquery-\d+|tiny-date-picker|lazyload|hammer|highlight|\/share2\/share)(.\d+.\d+|)(.min|).js(\?t=\d+|)"( charset="utf-8"|)><\/script>/', '', $html);
+        // $html = preg_replace('/<link rel="stylesheet" (type="text\/css" |)href="[a-z\/]+(custom|highlight|tilda-[a-z]+.\d+.\d+)(.min|).css(\?t=\d+|)"( type="text\/css" media="all" \/|)>/', '', $html);
+        $html = preg_replace('/rel="stylesheet"/', 'rel="preload" as="style" onload="this.onload=null;this.rel=\'stylesheet\'"', $html);
+
+        foreach ($scripts[0] as $script) {
+            $body .= preg_replace('/"><\/script>/', '" defer></script>', $script);
+        }
+
+        $body .= '<noscript id="deferred-styles">';
+
+        foreach ($styles[0] as $style) {
+            $body .= $style;
+            // $preloadstyles .= preg_replace('rel="stylesheet"', 'rel="preload" as="style" onload="this.onload=null;this.rel=\'stylesheet\'"', $style);
+        }
+
+        $body .= '</noscript><script id="deferred-scripts">
+        var loadDeferredStyles = function() {
+            var addStylesNode = document.getElementById("deferred-styles");
+            var replacement = document.createElement("div");
+            replacement.innerHTML = addStylesNode.textContent;
+            document.body.appendChild(replacement)
+            addStylesNode.parentElement.removeChild(addStylesNode);
+        };
+        var raf = window.requestAnimationFrame || window.mozRequestAnimationFrame ||window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+        if (raf) raf(function() { window.setTimeout(loadDeferredStyles, 0); }); else window.addEventListener("load", loadDeferredStyles);</script>';
+
+        $html = preg_replace('/<\/body>/', $body . '</body>', $html);
+
+        if ($html) {
+            $tildapage['html'] = $html;
+        }
+
+        return $tildapage;
+    }
+
+    public function removeScrOfImages($tildapage) {
+        $html = null;
+        $images = null;
+
+        $html = preg_replace('/src\s*=\s*[\"]\/tilda\/img\/([^\"]*?)[\"]/', 'src=""', $tildapage['html']);
+        $html = preg_replace('/background-image: url\(\'\/tilda\/img\/(.+)(\/resize|empty\/)+([^\']*?)[\']\)/', 'background-image: url(\'\')', $html);
+
+        if ($html) {
+            $tildapage['html'] = $html;
+        }
+
+        return $tildapage;
+    }
+
     /**
      * Сохраняем страницу
      */
@@ -670,6 +766,12 @@ class LocalProject
         $tildapage = $this->removeYandexMetrika($tildapage);
 
         $tildapage = $this->removeTildaStat($tildapage);
+
+        $tildapage = $this->replaceHeadScriptsToBody($tildapage);
+
+        $tildapage = $this->addSetTimeoutForScripts($tildapage);
+
+        $tildapage = $this->removeScrOfImages($tildapage);
 
         /* сохраняем HTML */
         file_put_contents($this->getProjectFullDir() . $filename, $tildapage['html']);
