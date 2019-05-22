@@ -620,17 +620,17 @@ class LocalProject
         $scripts = null;
         $body = null;
 
-        preg_match_all('/(?<=<[Ss][Cc][Rr][Ii][Pp][Tt]>|<[Ss][Cc][Rr][Ii][Pp][Tt] type="text\/javascript">)([\s\S]*?)(?=<\/[Ss][Cc][Rr][Ii][Pp][Tt]>)/', $tildapage['html'], $scripts);
+        preg_match_all('/(?<=<[Ss][Cc][Rr][Ii][Pp][Tt]>|<[Ss][Cc][Rr][Ii][Pp][Tt] type="text\/javascript">)([\s\S]*?)(?=<\/[Ss][Cc][Rr][Ii][Pp][Tt]>)/', $tildapage['html'], $temp);
 
         $html = preg_replace('/<[Ss][Cc][Rr][Ii][Pp][Tt]( type="text\/javascript"|)>([\s\S]*?)<\/[Ss][Cc][Rr][Ii][Pp][Tt]>/', '', $tildapage['html']);
 
-        foreach ($scripts[0] as $script) {
-            $body .= $script;
+        foreach ($temp[0] as $script) {
+            $scripts .= $script;
         }
 
         $body = '<script type="text/javascript">
         function loop' . $tildapage['id'] . '() {
-        if (window.jQuery) {' . $body . '}}
+        if (window.jQuery) {' . $scripts . '}}
         var timer' . $tildapage['id'] . ' = setTimeout(function () {
         loop' . $tildapage['id'] . '();
             }, 500);
