@@ -618,7 +618,7 @@ class LocalProject
     public function addSetTimeoutForScripts($tildapage) {
         $html = null;
         $scripts = null;
-        $body = null;
+        $beforeBody = null;
 
         preg_match_all('/(?<=<[Ss][Cc][Rr][Ii][Pp][Tt]>|<[Ss][Cc][Rr][Ii][Pp][Tt] type="text\/javascript">)([\s\S]*?)(?=<\/[Ss][Cc][Rr][Ii][Pp][Tt]>)/', $tildapage['html'], $temp);
 
@@ -628,7 +628,7 @@ class LocalProject
             $scripts .= $script;
         }
 
-        $body = '<script type="text/javascript">
+        $beforeBody = '<script type="text/javascript">
         function loop' . $tildapage['id'] . '() {
         if (window.jQuery) {' . $scripts . '}}
         var timer' . $tildapage['id'] . ' = setTimeout(function () {
@@ -636,7 +636,7 @@ class LocalProject
             }, 500);
         </script>';
 
-        $html = preg_replace('/<\/body>/', $body . '</body>', $html);
+        $html = preg_replace('/<\/body>/', $beforeBody . '</body>', $html);
 
         if ($html) {
             $tildapage['html'] = $html;
