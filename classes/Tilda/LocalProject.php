@@ -628,12 +628,11 @@ class LocalProject
             $scripts .= $script;
         }
 
+        $rand = $tildapage['id'];
         $beforeBody = '<script type="text/javascript">
-        function loop' . $tildapage['id'] . '() {
-        if (window.jQuery) {' . $scripts . '}}
-        var timer' . $tildapage['id'] . ' = setTimeout(function () {
-        loop' . $tildapage['id'] . '();
-            }, 500);
+        function runScripts' . $rand . '() {
+        ' . $scripts . '
+        }
         </script>';
 
         $html = preg_replace('/<\/body>/', $beforeBody . '</body>', $html);
@@ -660,14 +659,19 @@ class LocalProject
         preg_match_all('/<script( type="text\/javascript"|) src="[a-z\/\.]+(tilda-[a-z]+(-[a-z]+|)|jquery-\d+|tiny-date-picker|lazyload|hammer|highlight|\/share2\/share)(.\d+.\d+|)(.min|).js(\?t=\d+|)"( charset="utf-8"|)><\/script>/', $html, $scripts);
         preg_match_all('/<link rel="stylesheet" (type="text\/css" |)href="[a-z\/]+(custom|highlight|tilda-[a-z]+.\d+.\d+)(.min|).css(\?t=\d+|)"( type="text\/css" media="all" \/|)>/', $html, $styles);
 
-        // print_r($scripts[0]);
-
         $html = preg_replace('/<script( type="text\/javascript"|) src="[a-z\/\.]+(tilda-[a-z]+(-[a-z]+|)|jquery-\d+|tiny-date-picker|lazyload|hammer|highlight|\/share2\/share)(.\d+.\d+|)(.min|).js(\?t=\d+|)"( charset="utf-8"|)><\/script>/', '', $html);
         // $html = preg_replace('/<link rel="stylesheet" (type="text\/css" |)href="[a-z\/]+(custom|highlight|tilda-[a-z]+.\d+.\d+)(.min|).css(\?t=\d+|)"( type="text\/css" media="all" \/|)>/', '', $html);
         $html = preg_replace('/rel="stylesheet"/', 'rel="preload" as="style" onload="this.onload=null;this.rel=\'stylesheet\'"', $html);
 
+        $i = 0;
+        $len = count($scripts[0]);
         foreach ($scripts[0] as $script) {
-            $body .= preg_replace('/"><\/script>/', '" defer></script>', $script);
+            if ($i == $len - 1) {
+                $body .= preg_replace('/"><\/script>/', '" defer onload="runScripts'. $tildapage['id'] . '()"></script>', $script);
+            } else {
+               $body .= preg_replace('/"><\/script>/', '" defer></script>', $script);
+            }
+            $i++;
         }
 
         $body .= '<noscript id="deferred-styles">';
